@@ -19,17 +19,14 @@ Describe -Name "Get-SID Tests" {
         $SID = Get-SID
 
         It "Should match SID RegEx pattern" {
-
             $SID | Should -Match $RegEx
         }
 
         It "Should be of type string" {
-
             $SID | Should -BeOfType ([string])
         }
 
         It "Should match the current user SID: $CurrentUser" {
-
             $SID | Should -Match $CurrentUser
         }
     }
@@ -39,17 +36,14 @@ Describe -Name "Get-SID Tests" {
         $SIDS = Get-SID -UserName "$env:username", "$env:username", "$env:username"
 
         It "Should match SID RegEx pattern" {
-
             $SIDS | Should -Match $RegEx
         }
 
         It "Should be of type string" {
-
             $SIDS | Should -BeOfType ([string])
         }
 
         It "Should have count of 3" {
-
             $SIDS | Should -HaveCount 3
         }
     }
