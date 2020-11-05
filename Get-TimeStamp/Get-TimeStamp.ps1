@@ -2,10 +2,8 @@ function Get-TimeStamp {
     <#
     .SYNOPSIS
         Get time stamp
-
     .NOTES
         Author:  Andrew Bounds
-
     .LINK
         https://github.com/p0rkjello/PowerShell
     #>
@@ -14,7 +12,7 @@ function Get-TimeStamp {
         [switch]
         $iso8601 = $false
     )
-    $String = switch ($iso8601) {
+    $String = switch ($iso8601.IsPresent) {
         true { 'yyyy-MM-ddTHH:mm:ssZ' }
         false { 'yyyyMMddHHmmss' }
     }
