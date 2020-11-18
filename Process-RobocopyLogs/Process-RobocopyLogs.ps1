@@ -24,13 +24,18 @@
 
         Default value: '8'
 
-        .NOTES
-            Author:  Andrew Bounds
+    .PARAMETER ShowProgress
+        Show progress bar.
 
-        .LINK
-            https://github.com/p0rkjello/PowerShell
-        #>
-    #requires -version 3
+        Default value: $false
+
+    .NOTES
+        Author:  Andrew Bounds
+
+    .LINK
+        https://github.com/p0rkjello/PowerShell
+    #>
+    #Requires -Version 3
     [CmdletBinding()]
     param(
         [string]
@@ -45,25 +50,35 @@
 
         [ValidateNotNullOrEmpty()]
         [int32]
-        $MaxThreads = 8
+        $MaxThreads = 8,
+
+        [switch]
+        $ShowProgress = $false
     )
     begin {
-        # Set script directory, name, and path.
-        $ScriptCmd = ([io.fileinfo]$MyInvocation.MyCommand.Definition).BaseName
-
-        # Use script name as the log name for easier identification.
-        # If a log parameter is not defined, create one in the script directory.
-        if (-not ($PSBoundParameters.ContainsKey('OutFile'))) {
-            $DateStamp = ((Get-Date).ToUniversalTime().ToString("yyyyMMdd_hhmm"))
-            $Outfile = '{0}_{1}.csv' -f $ScriptCmd, $DateStamp
-            $Outfile = Join-Path -Path $PSScriptRoot -ChildPath $Outfile
-        }
-
         $Files = Get-ChildItem -Path $LogPath -Include *.txt, *.log -Recurse
+
+        [int]$CountTotal = $Files.Count
+        [int]$Count = 0
     }
     process {
         $RemoteJob =
         foreach ($File in $Files) {
+
+            if ($ShowProgress.IsPresent) {
+                if ($CountTotal -gt 0) {
+                    $Count++
+                    Status = '{0} / {1} | {2}' -f $Count, $CountTotal, $File
+                    $Progress = @{
+                        Activity        = "Processing file..."
+                        Id              = "1"
+                        Status          = $Status
+                        PercentComplete = (($Count / $CountTotal) * 100)
+                    }
+
+                    Write-Progress @Progress
+                }
+            }
 
             # Skip files of 0 length
             if ($File.Length -eq 0) {
@@ -74,6 +89,16 @@
             # Throttle Start-Job to $MaxThreads
             While (@(Get-Job | Where-Object { $_.State -eq "Running" }).Count -ge $MaxThreads) {
                 Write-Verbose "Waiting for open thread...($MaxThreads Maximum)"
+                if ($ShowProgress.IsPresent) {
+                    $ThreadProgress = @{
+                        Activity = "Waiting for open thread...($MaxThreads Maximum)"
+                        Id       = "2"
+                        Status   = "Throttling..."
+                    }
+
+                    Write-Progress @ThreadProgress
+                }
+
                 Start-Sleep -Seconds 3
             }
 
@@ -137,18 +162,7 @@
         $RemoteJob | Wait-Job -Timeout $Timeout | Out-Null
     }
     end {
-        $Jobs = Get-Job
-        $Results = $Jobs | Receive-Job
+        Get-Job | Receive-Job
         Get-Job | Remove-Job
-        if ($Results) {
-            $Results
-            if ($OutFile) {
-                $Results | Export-Csv $OutFile -NoTypeInformation -NoClobber
-                if ((Test-Path -Path $OutFile -PathType Leaf)) {
-                    Write-Host "Output saved to `"$OutFile`"" -ForegroundColor Green
-                    Write-Host `n
-                }
-            }
-        }
     }
 }
